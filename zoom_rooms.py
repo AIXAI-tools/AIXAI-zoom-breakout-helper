@@ -21,7 +21,7 @@ except Exception:
     ctypes.windll.user32.SetProcessDPIAware()
 
 from zt import __version__ as VERSION  # noqa: E402  (需在 DPI 設定之後匯入)
-from zt import actions, calib, env, store, ui, update  # noqa: E402
+from zt import actions, calib, env, report_dialog, store, ui, update  # noqa: E402
 
 VK_ESC, VK_F8 = 0x1B, 0x77
 DELAY_LABELS = {"hover": "hover 等待（秒）", "dialog": "改名視窗等待（秒）", "after": "每間之間等待（秒）"}
@@ -135,6 +135,7 @@ class App(tk.Tk):
         m.add_command(label="開啟資料夾（清單、校準、紀錄）", command=lambda: os.startfile(store.ROOT))
         m.add_separator()
         m.add_command(label=f"檢查更新（目前 v{VERSION}）", command=self.check_update)
+        m.add_command(label="回報問題（直接送出）", command=self.report_issue)
         bar.add_cascade(label="檢視", menu=m)
 
     # ---- 清單 ----
@@ -320,6 +321,13 @@ class App(tk.Tk):
             store.save_calibration(self.calib)
             self.set_cal_warn("尚未校準")
             self.refresh_props()
+
+    # ---- 回報問題：開啟回報視窗（直接送出到 feedback-relay，送出前會顯示完整內容）----
+    def report_issue(self):
+        if getattr(self, "report_win", None) and self.report_win.win.winfo_exists():
+            self.report_win.win.lift()
+            return
+        self.report_win = report_dialog.ReportDialog(self)
 
     # ---- 檢查更新（只提醒，不自動更新）----
     def check_update(self):

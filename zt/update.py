@@ -6,6 +6,7 @@ import urllib.request
 REPO = "AIXAI-tools/AIXAI-zoom-breakout-helper"
 API = f"https://api.github.com/repos/{REPO}/releases/latest"
 RELEASES_PAGE = f"https://github.com/{REPO}/releases"
+ISSUES_URL = f"https://github.com/{REPO}/issues/new/choose"
 
 
 def _parse(version):

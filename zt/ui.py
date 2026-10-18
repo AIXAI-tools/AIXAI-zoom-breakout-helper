@@ -130,6 +130,10 @@ def apply_theme(root):
     st.map("TCombobox", fieldbackground=[("readonly", FIELD)], selectbackground=[("readonly", FIELD)],
            selectforeground=[("readonly", TEXT)], bordercolor=[("focus", BLUE)],
            arrowcolor=[("active", GOLD_HI)])
+    st.configure("TCheckbutton", background=BG, foreground=TEXT, indicatorbackground=FIELD,
+                 indicatorforeground=GOLD, bordercolor=LINE, focuscolor=BG)
+    st.map("TCheckbutton", background=[("active", BG)], indicatorbackground=[("selected", FIELD)],
+           foreground=[("active", BLUE_HI)])
     st.configure("TSpinbox", fieldbackground=FIELD, background=PANEL, foreground=TEXT, arrowcolor=GOLD,
                  bordercolor=LINE, padding=3)
     st.configure("Vertical.TScrollbar", background="#1d2c4a", troughcolor=FIELD, bordercolor=FIELD,

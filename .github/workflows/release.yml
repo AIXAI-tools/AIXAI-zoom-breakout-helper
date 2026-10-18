@@ -1,0 +1,87 @@
+name: Build and release
+
+# 推送 v* 標籤 → 在 GitHub 上從公開原始碼編譯單檔 exe 並發布 Release。
+# 手動執行（workflow_dispatch）只會編譯並上傳成品供下載測試，不會發布 Release。
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write       # 建立 Release
+  id-token: write       # 簽發建置來源證明（build provenance）
+  attestations: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt pyinstaller
+
+      - name: Check tag matches version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          ver=$(python -c "import re; print(re.search(r'\"(.+?)\"', open('zt/__init__.py', encoding='utf-8').read()).group(1))")
+          if [ "v$ver" != "$GITHUB_REF_NAME" ]; then
+            echo "標籤 $GITHUB_REF_NAME 與 zt/__init__.py 的版本 v$ver 不一致，請先修正再發版。"
+            exit 1
+          fi
+
+      - name: Build single-file exe
+        shell: bash
+        run: >
+          python -m PyInstaller --noconfirm --clean --windowed --onefile
+          --name AIXAI-zoom-breakout-helper
+          --collect-submodules pyautogui --exclude-module numpy
+          --icon assets/icon.ico --add-data "assets/icon.ico;assets"
+          zoom_rooms.py
+
+      - name: Compute SHA256
+        shell: pwsh
+        run: |
+          $h = (Get-FileHash dist/AIXAI-zoom-breakout-helper.exe -Algorithm SHA256).Hash.ToLower()
+          Set-Content -Path sha256.txt -Value $h -NoNewline
+          "SHA256: $h"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/AIXAI-zoom-breakout-helper.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AIXAI-zoom-breakout-helper
+          path: |
+            dist/AIXAI-zoom-breakout-helper.exe
+            sha256.txt
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "## AIXAI-zoom-breakout-helper $GITHUB_REF_NAME"
+            echo
+            echo "SHA256："
+            echo '```'
+            cat sha256.txt
+            echo
+            echo '```'
+            echo
+            echo "此 exe 由 GitHub Actions 從本 repo 的公開原始碼編譯，可用 \`gh attestation verify AIXAI-zoom-breakout-helper.exe --repo $GITHUB_REPOSITORY\` 驗證建置來源。"
+            echo
+            cat .github/release-footer.md
+          } > notes.md
+          gh release create "$GITHUB_REF_NAME" dist/AIXAI-zoom-breakout-helper.exe \
+            --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag
