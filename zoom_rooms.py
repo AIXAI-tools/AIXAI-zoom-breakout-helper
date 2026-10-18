@@ -132,7 +132,7 @@ class App(tk.Tk):
 
         m = tk.Menu(bar, tearoff=0)
         m.add_command(label="屬性與環境", command=self.show_props)
-        m.add_command(label="開啟紀錄資料夾", command=lambda: os.startfile(store.LOG_DIR))
+        m.add_command(label="開啟資料夾（清單、校準、紀錄）", command=lambda: os.startfile(store.ROOT))
         m.add_separator()
         m.add_command(label=f"檢查更新（目前 v{VERSION}）", command=self.check_update)
         bar.add_cascade(label="檢視", menu=m)

@@ -9,14 +9,32 @@
   紀錄/env_history.jsonl 環境變化紀錄
 """
 import json
+import os
 import re
 import shutil
 import sys
 import time
 from pathlib import Path
 
-# 資料放在程式旁邊：原始碼版是專案資料夾，打包成 exe 後是 exe 所在資料夾（整包帶著走）
-ROOT = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent.parent
+APP_NAME = "AIXAI-zoom-breakout-helper"
+
+
+def _data_root():
+    """資料根目錄：
+    - 原始碼版：專案資料夾（開發用）。
+    - exe 版：%APPDATA% 底下的 AIXAI-zoom-breakout-helper 資料夾，exe 旁邊保持乾淨、只有它自己。
+    - exe 版想帶著資料走（隨身碟、借電腦）：在 exe 旁放一個空白的 portable.txt，
+      資料就改存到 exe 旁的單一資料夾 AIXAI-zoom-breakout-helper-data。
+    """
+    if not getattr(sys, "frozen", False):
+        return Path(__file__).resolve().parent.parent
+    exe_dir = Path(sys.executable).parent
+    if (exe_dir / "portable.txt").exists():
+        return exe_dir / f"{APP_NAME}-data"
+    return Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming") / APP_NAME
+
+
+ROOT = _data_root()
 PROFILE_DIR = ROOT / "清單"
 DATA_DIR = ROOT / "資料"
 LOG_DIR = ROOT / "紀錄"
@@ -43,7 +61,7 @@ def _safe_name(name):
 
 def init():
     for d in (PROFILE_DIR, DATA_DIR, LOG_DIR):
-        d.mkdir(exist_ok=True)
+        d.mkdir(parents=True, exist_ok=True)
     if not list_profiles():
         save_profile("範例", {**DEFAULT_PROFILE, "names": [f"第{n}組" for n in "一二三四五"]})
 
