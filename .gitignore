@@ -15,3 +15,6 @@ dist/
 000.recycle/
 _待移除說明.md
 .claude/
+
+# 使用者回報（check-reports 拉取的內容，含個人資料，不上傳）
+/bug report/
