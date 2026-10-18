@@ -1,6 +1,6 @@
 name: Build and release
 
-# 推送 v* 標籤 → 在 GitHub 上從公開原始碼編譯單檔 exe 並發布 Release。
+# 推送 v* 標籤 → 在 GitHub 上編譯單檔 exe 並發布 Release（公開與私人 repo 都會；私人 repo 不簽發建置來源證明）。
 # 手動執行（workflow_dispatch）只會編譯並上傳成品供下載測試，不會發布 Release。
 on:
   push:
@@ -57,7 +57,9 @@ jobs:
           Set-Content -Path sha256.txt -Value $h -NoNewline
           "SHA256: $h"
 
+      # 建置來源證明：GitHub 不支援「個人帳號的私人 repo」，所以只在公開 repo 簽發
       - name: Attest build provenance
+        if: ${{ !github.event.repository.private }}
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: dist/AIXAI-zoom-breakout-helper.exe
@@ -85,7 +87,11 @@ jobs:
             echo
             echo '```'
             echo
-            echo "此 exe 由 GitHub Actions 從本 repo 的公開原始碼編譯，可用 \`gh attestation verify AIXAI-zoom-breakout-helper.exe --repo $GITHUB_REPOSITORY\` 驗證建置來源。"
+            if [ "${{ github.event.repository.private }}" = "false" ]; then
+              echo "此 exe 由 GitHub Actions 從本 repo 的公開原始碼編譯，可用 \`gh attestation verify AIXAI-zoom-breakout-helper.exe --repo $GITHUB_REPOSITORY\` 驗證建置來源。"
+            else
+              echo "（私人 repo 的內部建置：GitHub 不支援私人 repo 的建置來源證明，故未簽發。）"
+            fi
             echo
             cat .github/release-footer.md
           } > notes.md
