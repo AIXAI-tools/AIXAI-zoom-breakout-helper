@@ -38,7 +38,7 @@ Notes:
 
 ## Run from source
 1. Install [Python](https://www.python.org/downloads/) (tick *Add python.exe to PATH*).
-2. Double-click `安裝套件.bat` (installs `pyautogui` and `pyperclip`; only once).
+2. Double-click `安裝套件.bat` (installs `pyautogui`, `pyperclip` and `Pillow`; only once).
 3. Double-click `啟動.bat`.
 
 To build the exe yourself, run `build.bat` (needs Python); the result is in `dist\`.

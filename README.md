@@ -28,7 +28,7 @@ Zoom 的 REST API 無法在「進行中的會議」操作分組討論室，所�
 
 ## 安裝與啟動（原始碼版）
 1. 安裝 [Python](https://www.python.org/downloads/)（安裝時勾選 *Add python.exe to PATH*）
-2. 雙擊 `安裝套件.bat`（只需做一次，會安裝 `pyautogui`、`pyperclip`）
+2. 雙擊 `安裝套件.bat`（只需做一次，會安裝 `pyautogui`、`pyperclip`、`Pillow`）
 3. 雙擊 `啟動.bat`
 
 ## 免安裝 exe 版（不用裝 Python）
