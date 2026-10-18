@@ -1,0 +1,17 @@
+# 個人資料（校準座標、房名清單、使用紀錄）不上傳
+/清單/
+/資料/
+/紀錄/
+config.json
+
+# Python / 打包
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+
+# 其他
+000.recycle/
+_待移除說明.md
+.claude/
