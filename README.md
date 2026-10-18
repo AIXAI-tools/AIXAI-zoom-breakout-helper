@@ -27,6 +27,15 @@ Zoom 的 REST API 無法在「進行中的會議」操作分組討論室，所�
 2. 雙擊 `安裝套件.bat`（只需做一次，會安裝 `pyautogui`、`pyperclip`）
 3. 雙擊 `啟動.bat`
 
+## 免安裝 exe 版（不用裝 Python）
+1. 到 [Releases](../../releases) 下載 `AIXAI-zoom-breakout-helper-vX.Y.Z-win64.zip`，解壓縮。
+2. 雙擊資料夾裡的 `AIXAI-zoom-breakout-helper.exe`。
+3. 清單、校準、紀錄會建立在 **exe 旁邊**，整個資料夾可以放隨身碟帶著走。
+
+> 這類會模擬滑鼠鍵盤、且沒有數位簽章的程式，Windows SmartScreen 或防毒軟體可能跳出警告或誤判。程式碼完全公開，你可以自行檢視，或改用上面的原始碼版。每個 Release 都附有 SHA256 雜湊值，可用來核對檔案是否被改動。
+
+自行打包：執行 `build.bat`（需要 Python），輸出在 `dist\`。
+
 ## 使用方式
 ### 第一次：校準
 1. 在 Zoom 會議中打開「分組討論」。
