@@ -5,7 +5,9 @@
 """
 import ctypes
 import ctypes.wintypes
+import sys
 import tkinter as tk
+from pathlib import Path
 
 BAR_BG, BAR_FG, BORDER = "#2b2b2b", "#eeeeee", "#777777"
 FONT_FAMILY, FONT_SIZE = "Microsoft JhengHei", 10  # 全程式統一字型，只在這裡改
@@ -73,6 +75,20 @@ def compact(win, title, on_close=None, menu=None, resizable=True, min_size=(200,
     if resizable:
         _edge_resize(win, min_size, state)
     return body, widgets
+
+
+def resource_path(rel):
+    """程式內附的資源路徑：打包成 exe 後在暫存解壓目錄，原始碼版在專案資料夾。"""
+    base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))
+    return base / rel
+
+
+def apply_icon(root):
+    """視窗與工作列 icon（default=True 讓之後開的子視窗也套用）。找不到檔案就略過。"""
+    try:
+        root.iconbitmap(default=str(resource_path("assets/icon.ico")))
+    except tk.TclError:
+        pass
 
 
 def apply_fonts(root):

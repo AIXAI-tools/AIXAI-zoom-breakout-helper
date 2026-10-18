@@ -45,6 +45,7 @@ class App(tk.Tk):
 
         self.title("zoom分組小工具")  # 無邊框後標題只會顯示在工作列
         ui.apply_fonts(self)
+        ui.apply_icon(self)
         self.attributes("-topmost", bool(self.settings.get("topmost", True)))
         self.mode_var = tk.StringVar()
         self.assign_var = tk.StringVar()
