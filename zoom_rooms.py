@@ -9,6 +9,7 @@ import os
 import threading
 import time
 import tkinter as tk
+import webbrowser
 from tkinter import messagebox, simpledialog, ttk
 
 import pyautogui
@@ -19,9 +20,9 @@ try:
 except Exception:
     ctypes.windll.user32.SetProcessDPIAware()
 
-from zt import actions, calib, env, store, ui  # noqa: E402  (需在 DPI 設定之後匯入)
+from zt import __version__ as VERSION  # noqa: E402  (需在 DPI 設定之後匯入)
+from zt import actions, calib, env, store, ui, update  # noqa: E402
 
-VERSION = "1.0"
 VK_ESC, VK_F8 = 0x1B, 0x77
 DELAY_LABELS = {"hover": "hover 等待（秒）", "dialog": "改名視窗等待（秒）", "after": "每間之間等待（秒）"}
 
@@ -45,6 +46,7 @@ class App(tk.Tk):
 
         self.title("zoom分組小工具")  # 無邊框後標題只會顯示在工作列
         ui.apply_fonts(self)
+        ui.apply_theme(self)
         ui.apply_icon(self)
         self.attributes("-topmost", bool(self.settings.get("topmost", True)))
         self.mode_var = tk.StringVar()
@@ -64,15 +66,18 @@ class App(tk.Tk):
         self.status = tk.StringVar(value="就緒")
         self.status_short = tk.StringVar(value="就緒")
         self.status.trace_add("write", self.on_status_change)
-        lbl = ttk.Label(body, textvariable=self.status_short, foreground="#0a5", cursor="hand2")
+        lbl = self.status_lbl = ttk.Label(body, textvariable=self.status_short, style="Status.TLabel", cursor="hand2")
         lbl.pack(side="bottom", fill="x", padx=6, pady=(0, 2))
         lbl.bind("<Button-1>", lambda e: messagebox.showinfo("狀態", self.status.get()))
-        ttk.Button(body, text="▶ 執行", command=self.on_run).pack(
+        ttk.Button(body, text="▶ 執行", style="Accent.TButton", command=self.on_run).pack(
             side="bottom", fill="x", padx=6, pady=2)
 
         frame = ttk.Frame(body)
         frame.pack(fill="both", expand=True, padx=6)
-        self.text = tk.Text(frame, height=3, width=10, font=ui.FONT, wrap="none")
+        self.text = tk.Text(frame, height=3, width=10, font=ui.FONT, wrap="none", bg=ui.FIELD, fg=ui.TEXT,
+                            insertbackground=ui.GOLD, selectbackground="#1f3b66", selectforeground=ui.TEXT,
+                            relief="flat", bd=0, padx=8, pady=6, highlightthickness=1,
+                            highlightbackground=ui.LINE, highlightcolor=ui.BLUE)
         sb = ttk.Scrollbar(frame, command=self.text.yview)
         self.text.configure(yscrollcommand=sb.set)
         sb.pack(side="right", fill="y")
@@ -89,6 +94,7 @@ class App(tk.Tk):
     def on_status_change(self, *_):
         text = self.status.get().replace("\n", " ")
         self.status_short.set(text if len(text) <= 12 else text[:11] + "…")
+        self.status_lbl.configure(style="Warn.TLabel" if text.startswith("⚠") else "Status.TLabel")
 
     # ---- 選單 ----
     def build_menu(self):
@@ -127,6 +133,8 @@ class App(tk.Tk):
         m = tk.Menu(bar, tearoff=0)
         m.add_command(label="屬性與環境", command=self.show_props)
         m.add_command(label="開啟紀錄資料夾", command=lambda: os.startfile(store.LOG_DIR))
+        m.add_separator()
+        m.add_command(label=f"檢查更新（目前 v{VERSION}）", command=self.check_update)
         bar.add_cascade(label="檢視", menu=m)
 
     # ---- 清單 ----
@@ -218,15 +226,15 @@ class App(tk.Tk):
         head, hint = tk.StringVar(), tk.StringVar()
         mw = self.winfo_width()  # 寬度與主視窗一致，不留多餘空白
         wrap = mw - 2 * ui.BW - 16
-        tk.Frame(box, width=mw - 2 * ui.BW, height=1).pack()
+        tk.Frame(box, width=mw - 2 * ui.BW, height=1, bg=ui.BG).pack()
         # 按鈕列先 pack 到底部，文字區高度固定時按鈕位置也固定
         row = ttk.Frame(box)
         row.pack(side="bottom", fill="x", padx=8, pady=(0, 4))
         ttk.Button(row, text="跳過 (Esc)", command=self.cal_skip).pack(side="left")
         ttk.Button(row, text="結束校準", command=lambda: self.cal_end("校準已結束")).pack(side="right")
-        ttk.Label(box, text="※ 筆電請按 Fn + F8", foreground="#b45a00").pack(
+        ttk.Label(box, text="※ 筆電請按 Fn + F8", style="Hint.TLabel").pack(
             side="bottom", anchor="w", padx=8, pady=(0, 2))  # 固定提醒，每一步都顯示
-        ttk.Label(box, textvariable=head, font=ui.FONT + ("bold",)).pack(
+        ttk.Label(box, textvariable=head, style="Head.TLabel").pack(
             anchor="w", padx=8, pady=(4, 0))
         ttk.Label(box, textvariable=hint, justify="left").pack(anchor="w", padx=8, pady=2)
         # f8/esc 初值 True：避免把開始前就按住的鍵當成新的按下
@@ -313,6 +321,34 @@ class App(tk.Tk):
             self.set_cal_warn("尚未校準")
             self.refresh_props()
 
+    # ---- 檢查更新（只提醒，不自動更新）----
+    def check_update(self):
+        self.status.set("檢查更新中…")
+        threading.Thread(target=self._check_update_worker, daemon=True).start()
+
+    def _check_update_worker(self):
+        try:
+            r = update.check(VERSION)
+        except Exception as e:  # 網路不通、被防火牆擋、GitHub 暫時異常等
+            self.after(0, self._update_result, None, str(e))
+        else:
+            self.after(0, self._update_result, r, "")
+
+    def _update_result(self, r, err):
+        if r is None:
+            self.status.set("檢查更新失敗")
+            messagebox.showerror("檢查更新", f"無法連到 GitHub，請確認網路後再試。\n\n詳細：{err}")
+        elif r["status"] == "new":
+            self.status.set(f"有新版本 {r['tag']}")
+            if messagebox.askyesno("檢查更新", f"有新版本 {r['tag']}（目前 v{VERSION}）。\n要開啟下載頁面嗎？"):
+                webbrowser.open(r["url"])
+        elif r["status"] == "latest":
+            self.status.set("已是最新版")
+            messagebox.showinfo("檢查更新", f"目前 v{VERSION} 已是最新版。")
+        else:
+            self.status.set("尚未發布正式版本")
+            messagebox.showinfo("檢查更新", "專案目前還沒有發布任何正式版本。")
+
     # ---- 屬性與環境 ----
     def show_props(self):
         if self.props and self.props.winfo_exists():
@@ -321,15 +357,15 @@ class App(tk.Tk):
         w = self.props = tk.Toplevel(self)
         w.attributes("-topmost", True)
         box, _ = ui.compact(w, f"屬性 v{VERSION}", resizable=False)
-        self.env_label = ttk.Label(box, justify="left", foreground="#444")
+        self.env_label = ttk.Label(box, justify="left", style="Muted.TLabel")
         self.env_label.pack(anchor="w", padx=8, pady=(8, 2))
         self.tree = ttk.Treeview(box, columns=("pos", "req"), height=len(calib.STEPS), selectmode="browse")
-        self.tree.heading("#0", text="項目（雙擊重校準）")
+        self.tree.heading("#0", text="項目（雙擊重校準）", anchor="w")
         self.tree.heading("pos", text="座標")
         self.tree.heading("req", text="")
-        self.tree.column("#0", width=110)
-        self.tree.column("pos", width=80, anchor="center")
-        self.tree.column("req", width=40, anchor="center")
+        self.tree.column("#0", width=230)
+        self.tree.column("pos", width=140, anchor="center")
+        self.tree.column("req", width=70, anchor="center")
         self.tree.pack(padx=8, pady=4)
         self.tree.bind("<Double-1>", lambda e: self.tree.selection() and self.calibrate([self.tree.selection()[0]]))
         grid = ttk.Frame(box)

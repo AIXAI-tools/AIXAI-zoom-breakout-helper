@@ -9,7 +9,11 @@ import sys
 import tkinter as tk
 from pathlib import Path
 
-BAR_BG, BAR_FG, BORDER = "#2b2b2b", "#eeeeee", "#777777"
+# 色票（深藍底＋金藍雙色，與 AIXAI 系列圖示一致）
+BG, PANEL, FIELD, LINE, BAR = "#0b1220", "#111b30", "#080e1c", "#24324f", "#060b16"
+TEXT, MUTED = "#e8eef8", "#8fa0bf"
+GOLD, GOLD_HI, BLUE, BLUE_HI = "#f5b73d", "#ffd36b", "#3db8ff", "#8bd8ff"
+BORDER = LINE
 FONT_FAMILY, FONT_SIZE = "Microsoft JhengHei", 10  # 全程式統一字型，只在這裡改
 FONT = (FONT_FAMILY, FONT_SIZE)
 SIZE_RATIO = 1 / 6  # 預設視窗大小 = 螢幕寬、高各 1/6
@@ -23,23 +27,36 @@ def compact(win, title, on_close=None, menu=None, resizable=True, min_size=(200,
     win.overrideredirect(True)
     win.configure(bg=BORDER)
 
-    bar = tk.Frame(win, bg=BAR_BG)
+    bar = tk.Frame(win, bg=BAR)
     bar.pack(side="top", fill="x", padx=BW, pady=(BW, 0))
-    body = tk.Frame(win)
+    strip = tk.Canvas(win, width=1, height=2, highlightthickness=0, bd=0, bg=BORDER)  # 標題列下的金→藍漸層細線
+    strip.pack(side="top", fill="x", padx=BW)
+    body = tk.Frame(win, bg=BG)
     body.pack(side="top", fill="both", expand=True, padx=BW, pady=(0, BW))
     widgets = {}
 
-    def label(text, **kw):
-        return tk.Label(bar, text=text, bg=BAR_BG, fg=BAR_FG, font=FONT, **kw)
+    def draw_strip(e):
+        strip.delete("all")
+        step = 4
+        for x in range(0, e.width, step):
+            strip.create_rectangle(x, 0, x + step, 2, width=0, fill=_mix(GOLD, BLUE, x / max(e.width, 1)))
+
+    strip.bind("<Configure>", draw_strip)
+
+    def label(text, color=MUTED, hover=TEXT, **kw):
+        lb = tk.Label(bar, text=text, bg=BAR, fg=color, font=FONT, **kw)
+        lb.bind("<Enter>", lambda e: lb.config(fg=hover))
+        lb.bind("<Leave>", lambda e: lb.config(fg=color))
+        return lb
 
     if menu is not None:
-        b = label(" ☰ ", cursor="hand2")
+        b = label(" ☰ ", color=GOLD, hover=GOLD_HI, cursor="hand2")
         b.pack(side="left")
         b.bind("<Button-1>", lambda e: menu.tk_popup(b.winfo_rootx(), b.winfo_rooty() + b.winfo_height()))
         widgets["menu_btn"] = b
-    ttl = label(title)
+    ttl = tk.Label(bar, text=title, bg=BAR, fg=GOLD, font=FONT + ("bold",))
     ttl.pack(side="left", padx=4)
-    close = label(" ✕ ", cursor="hand2")
+    close = label(" ✕ ", hover="#ff7a7a", cursor="hand2")
     close.pack(side="right")
     close.bind("<Button-1>", lambda e: (on_close or win.destroy)())
     state = {"collapsed": False, "geo": None}
@@ -77,6 +94,64 @@ def compact(win, title, on_close=None, menu=None, resizable=True, min_size=(200,
     return body, widgets
 
 
+
+
+def _mix(c1, c2, t):
+    a = [int(c1[i:i + 2], 16) for i in (1, 3, 5)]
+    b = [int(c2[i:i + 2], 16) for i in (1, 3, 5)]
+    return "#%02x%02x%02x" % tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
+
+
+def apply_theme(root):
+    """AIXAI 深色主題：深藍底、金色強調、藍色互動高光（與 DLA／VPN 圖示同一色系）。"""
+    from tkinter import ttk
+    root.configure(bg=BG)
+    st = ttk.Style(root)
+    st.theme_use("clam")
+    st.configure(".", background=BG, foreground=TEXT, fieldbackground=FIELD, bordercolor=LINE,
+                 lightcolor=LINE, darkcolor=LINE, troughcolor=FIELD, focuscolor=BG, font=FONT)
+    st.configure("TLabel", background=BG, foreground=TEXT)
+    st.configure("Status.TLabel", foreground=BLUE_HI)
+    st.configure("Warn.TLabel", foreground=GOLD)
+    st.configure("Hint.TLabel", foreground=GOLD)
+    st.configure("Muted.TLabel", foreground=MUTED)
+    st.configure("Head.TLabel", foreground=GOLD, font=FONT + ("bold",))
+
+    st.configure("TButton", background=PANEL, foreground=TEXT, bordercolor=LINE, padding=(10, 5), relief="flat")
+    st.map("TButton", background=[("pressed", "#22365e"), ("active", "#1a2a4a")],
+           bordercolor=[("active", BLUE)], foreground=[("active", BLUE_HI)])
+    st.configure("Accent.TButton", background=GOLD, foreground="#1a1200", bordercolor=GOLD,
+                 padding=(10, 7), font=FONT + ("bold",))
+    st.map("Accent.TButton", background=[("pressed", "#d89a22"), ("active", GOLD_HI)],
+           foreground=[("active", "#1a1200")], bordercolor=[("active", GOLD_HI)])
+
+    st.configure("TCombobox", fieldbackground=FIELD, background=PANEL, foreground=TEXT, arrowcolor=GOLD,
+                 bordercolor=LINE, padding=5)
+    st.map("TCombobox", fieldbackground=[("readonly", FIELD)], selectbackground=[("readonly", FIELD)],
+           selectforeground=[("readonly", TEXT)], bordercolor=[("focus", BLUE)],
+           arrowcolor=[("active", GOLD_HI)])
+    st.configure("TSpinbox", fieldbackground=FIELD, background=PANEL, foreground=TEXT, arrowcolor=GOLD,
+                 bordercolor=LINE, padding=3)
+    st.configure("Vertical.TScrollbar", background="#1d2c4a", troughcolor=FIELD, bordercolor=FIELD,
+                 arrowcolor=GOLD, gripcount=0)
+    st.map("Vertical.TScrollbar", background=[("active", "#2b4272")])
+    from tkinter import font as tkfont
+    # 列高依字型實際高度計算（高 DPI 螢幕上固定像素會讓文字擠在一起）；要放在 theme_use 之後才會生效
+    st.configure("Treeview", background=FIELD, fieldbackground=FIELD, foreground=TEXT, bordercolor=LINE,
+                 rowheight=tkfont.Font(font=FONT).metrics("linespace") + 10)
+    st.map("Treeview", background=[("selected", "#1f3b66")], foreground=[("selected", TEXT)])
+    st.configure("Treeview.Heading", background=PANEL, foreground=GOLD, bordercolor=LINE, relief="flat")
+
+    # 傳統 tk 元件（下拉清單、選單）走 option database
+    for k, v in (("*TCombobox*Listbox.background", FIELD), ("*TCombobox*Listbox.foreground", TEXT),
+                 ("*TCombobox*Listbox.selectBackground", "#1f3b66"), ("*TCombobox*Listbox.selectForeground", TEXT),
+                 ("*TCombobox*Listbox.font", FONT), ("*TCombobox*Listbox.borderWidth", 0),
+                 ("*Menu.background", PANEL), ("*Menu.foreground", TEXT), ("*Menu.activeBackground", "#1f3b66"),
+                 ("*Menu.activeForeground", BLUE_HI), ("*Menu.selectColor", GOLD), ("*Menu.borderWidth", 1),
+                 ("*Menu.relief", "flat"), ("*Menu.font", FONT)):
+        root.option_add(k, v)
+
+
 def resource_path(rel):
     """程式內附的資源路徑：打包成 exe 後在暫存解壓目錄，原始碼版在專案資料夾。"""
     base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))
@@ -99,7 +174,6 @@ def apply_fonts(root):
         tkfont.nametofont(name).configure(family=FONT_FAMILY, size=FONT_SIZE)
     tkfont.nametofont("TkFixedFont").configure(family=FONT_FAMILY, size=FONT_SIZE)
     root.option_add("*TCombobox*Listbox.font", FONT)
-    ttk.Style(root).configure("Treeview", rowheight=int(FONT_SIZE * 2.4))
 
 
 NO_LINE_START = "，。、；：！？」』）)】》,.;:!?"  # 這些符號不放在行首
