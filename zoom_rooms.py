@@ -348,14 +348,53 @@ class App(tk.Tk):
             messagebox.showerror("檢查更新", f"無法連到 GitHub，請確認網路後再試。\n\n詳細：{err}")
         elif r["status"] == "new":
             self.status.set(f"有新版本 {r['tag']}")
-            if messagebox.askyesno("檢查更新", f"有新版本 {r['tag']}（目前 v{VERSION}）。\n要開啟下載頁面嗎？"):
-                webbrowser.open(r["url"])
+            self._offer_update(r)
         elif r["status"] == "latest":
             self.status.set("已是最新版")
             messagebox.showinfo("檢查更新", f"目前 v{VERSION} 已是最新版。")
         else:
             self.status.set("尚未發布正式版本")
             messagebox.showinfo("檢查更新", "專案目前還沒有發布任何正式版本。")
+
+    def _offer_update(self, r):
+        """有新版：exe 版可自動更新（下載→核對 SHA256→覆蓋→重啟）；其他情況只開啟下載頁。"""
+        head = f"有新版本 {r['tag']}（目前 v{VERSION}）。"
+        if update.can_self_update() and r.get("asset_url") and r.get("sha256"):
+            mb = f"約 {r['size'] / 1048576:.0f} MB" if r.get("size") else ""
+            if self.busy or self.cal:
+                messagebox.showinfo("檢查更新", head + "\n目前正在執行其他操作，請等它結束後再更新。")
+            elif messagebox.askyesno("檢查更新", head + f"\n\n要現在更新嗎？會下載{mb}、核對 SHA256，"
+                                     "取代目前的程式並自動重新啟動。\n（你的清單與校準都會保留）"):
+                self.busy = True  # 更新期間不接受其他操作
+                threading.Thread(target=self._update_worker, args=(r,), daemon=True).start()
+        elif messagebox.askyesno("檢查更新", head + "\n要開啟下載頁面嗎？"):
+            webbrowser.open(r["url"])
+
+    def _update_worker(self, r):
+        dest = update.exe_path().with_name(update.exe_path().name + ".download")
+        try:
+            update.download_verified(r, dest, progress=lambda p: self.set_status(f"下載更新中… {p}%"))
+            self.set_status("驗證通過，正在更新…")
+            update.apply_update(dest)
+        except update.UpdateError as e:
+            self.busy = False
+            self.after(0, self._update_failed, r, str(e))
+        except OSError as e:
+            update._discard(dest)
+            self.busy = False
+            self.after(0, self._update_failed, r, f"更新時發生錯誤：{e}")
+        else:
+            self.after(0, self._update_done)
+
+    def _update_failed(self, r, reason):
+        self.status.set("更新失敗")
+        if messagebox.askyesno("更新失敗", f"{reason}\n\n目前的程式沒有被改動，仍可正常使用。\n要改到下載頁面手動更新嗎？"):
+            webbrowser.open(r["url"])
+
+    def _update_done(self):
+        self.status.set("更新完成，重新啟動中…")
+        update.restart()
+        self.on_close()
 
     # ---- 屬性與環境 ----
     def show_props(self):
@@ -462,4 +501,5 @@ class App(tk.Tk):
 
 
 if __name__ == "__main__":
+    update.cleanup_old()  # 清掉上次更新留下的 .old
     App().mainloop()

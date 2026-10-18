@@ -12,9 +12,10 @@ AIXAI-zoom-breakout-helper **沒有遙測、沒有廣告、不會在背景傳送
 - 去向：寄給開發者，並**保存在開發者的 Google 帳號**（Google Drive 與 Gmail），**不公開**，也不會用於廣告或轉售。
 - 若送出失敗，內容會複製到你的剪貼簿，你可以改用 GitHub Issues 回報（那是公開的）。
 
-## 2. 檢查更新（☰ → 檢視 → 檢查更新）
+## 2. 檢查更新與自動更新（☰ → 檢視 → 檢查更新）
 - 只在你按下時連線到 GitHub（`api.github.com`），讀取本專案最新 Release 的版本號，用來比對你的版本。
-- 不會下載或安裝任何東西，不會傳送你的任何資料（GitHub 會看到一般連線資訊，例如 IP）。
+- 有新版時會先問你；**只有你同意後**才會從本專案的 GitHub Release（`github.com`）下載新版 exe，核對 SHA256 相符才會取代目前的程式並重新啟動，不符就中止、原程式不受影響。
+- 下載網址限定為 GitHub 的 https 網域；不會傳送你的任何資料（GitHub 會看到一般連線資訊，例如 IP）。
 
 ## 你的資料存在哪裡
 全部存在你自己的電腦（`%APPDATA%\AIXAI-zoom-breakout-helper\`，或 `portable.txt` 模式下 exe 旁的資料夾），不會上傳。

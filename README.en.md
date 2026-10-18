@@ -17,7 +17,7 @@ For ad-hoc meetings (for example a fixed Personal Meeting ID), splitting people 
 - Detects changes in Zoom version or screen settings and reminds you to recalibrate (a reminder only, never forced)
 - Checks whether the screen looks abnormal after renaming
 - Minimal borderless dark window (gold and blue theme), resizable from all four edges
-- "Check for updates": connects only when you click it, compares with the latest GitHub release, never downloads or replaces anything by itself
+- "Check for updates": connects only when you click it and compares with the latest GitHub release. For the exe, **after you agree**, it downloads the new exe, verifies its SHA256, replaces itself and restarts (your lists and calibration are kept). From source it just opens the download page
 - "Report a problem": write a description, choose whether to attach diagnostics, **review the full content before it is sent and press Send yourself**; if sending fails the content is copied to your clipboard so you can use GitHub Issues instead. See [PRIVACY.md](PRIVACY.md) (Traditional Chinese)
 
 ## Requirements
@@ -35,6 +35,7 @@ Notes:
 - A single-file exe unpacks itself to a temporary folder every time, so it **takes about 2–3 seconds to start**. This is normal.
 - This kind of program simulates mouse and keyboard input and is not code-signed, so Windows SmartScreen or antivirus software may warn about it or flag it by mistake. The full source code is public; you can inspect it or run from source instead. Each release lists a SHA256 hash so you can verify the file.
 - If the program is force-killed (for example from Task Manager), a folder starting with `_MEI` may be left in your temp directory. You can delete it.
+- During a self-update the old exe is first renamed to `AIXAI-zoom-breakout-helper.exe.old` and removed automatically by the new version on its first start. If the exe's folder is not writable (for example under Program Files), it opens the download page instead.
 
 ## Run from source
 1. Install [Python](https://www.python.org/downloads/) (tick *Add python.exe to PATH*).
